@@ -5,7 +5,7 @@ import { Menu, PieChart } from "lucide-react";
 
 const navLinks = [
   { to: "/", label: "Dashboard" },
-  { to: "/transactions", label: "Transactions" },
+  { to: "/trades", label: "Trades" },
   { to: "/clients", label: "Clients" },
 ];
 

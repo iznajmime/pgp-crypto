@@ -5,7 +5,7 @@ import {
 } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import Transactions from "./pages/Transactions";
+import Trades from "./pages/Trades";
 import Clients from "./pages/Clients";
 
 function App() {
@@ -14,7 +14,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
-          <Route path="transactions" element={<Transactions />} />
+          <Route path="trades" element={<Trades />} />
           <Route path="clients" element={<Clients />} />
         </Route>
       </Routes>
