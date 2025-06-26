@@ -37,6 +37,7 @@ interface OpenPosition {
   pnl: number;
   marketValue: number;
   pnlPercent: number;
+  sevenDayChange: number;
 }
 
 interface ClientOwnership {
@@ -175,11 +176,12 @@ export default function Dashboard() {
             const avgBuyPrice = data.totalBuyQuantity > 0 ? data.totalBuyValue / data.totalBuyQuantity : 0;
             const costBasis = quantityHeld * avgBuyPrice;
             const livePrice = prices[asset]?.usd || 0;
+            const sevenDayChange = prices[asset]?.usd_7d_change || 0;
             const marketValue = quantityHeld * livePrice;
             const pnl = marketValue - costBasis;
             const pnlPercent = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
             
-            positions.push({ asset, quantityHeld, pnl, marketValue, pnlPercent });
+            positions.push({ asset, quantityHeld, pnl, marketValue, pnlPercent, sevenDayChange });
           }
         }
         setOpenPositions(positions.sort((a, b) => b.marketValue - a.marketValue));
@@ -360,7 +362,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Asset Performance</CardTitle>
             <CardDescription>
-              Unrealized profit and loss for each holding.
+              Unrealized P&L and 7-day performance for each holding.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -370,6 +372,7 @@ export default function Dashboard() {
                   <TableHead>Asset</TableHead>
                   <TableHead className="text-right">P&L</TableHead>
                   <TableHead className="text-right">P&L %</TableHead>
+                  <TableHead className="text-right">7d Change</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -399,11 +402,21 @@ export default function Dashboard() {
                           ? `${pos.pnl >= 0 ? '+' : ''}${pos.pnlPercent.toFixed(2)}%`
                           : 'N/A'}
                       </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-right font-semibold",
+                          pos.sevenDayChange >= 0
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        )}
+                      >
+                        {pos.sevenDayChange >= 0 ? '+' : ''}{pos.sevenDayChange.toFixed(2)}%
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                       No open positions to analyze.
                     </TableCell>
                   </TableRow>
