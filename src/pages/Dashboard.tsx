@@ -22,6 +22,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { PieChart } from "@mui/x-charts/PieChart";
 import { cn } from "@/lib/utils";
 
 interface PortfolioMetrics {
@@ -232,12 +233,13 @@ export default function Dashboard() {
           <SkeletonCard title="Total Portfolio Value" lines={1} />
           <SkeletonCard title="Unrealized P&L (Overall)" lines={2} />
         </div>
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
           <SkeletonCard title="Current Holdings" lines={3} />
           <SkeletonCard title="Asset Performance" lines={3} />
         </div>
-        <div className="mt-6">
+        <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
           <SkeletonCard title="Client Ownership" lines={4} />
+          <SkeletonCard title="Asset Allocation" lines={4} />
         </div>
       </div>
     );
@@ -263,6 +265,12 @@ export default function Dashboard() {
   if (!metrics) return null;
 
   const isPnlPositive = metrics.pnlUsd >= 0;
+
+  const pieChartData = openPositions.map((pos) => ({
+    id: pos.asset,
+    value: pos.marketValue,
+    label: pos.asset,
+  }));
 
   return (
     <div>
@@ -406,7 +414,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Client Ownership</CardTitle>
@@ -452,6 +460,46 @@ export default function Dashboard() {
                 )}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Asset Allocation</CardTitle>
+            <CardDescription>
+              Distribution of crypto assets by market value.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {pieChartData.length > 0 ? (
+              <PieChart
+                colors={['#03045E', '#023E8A', '#0077B6', '#0096C7', '#00B4D8', '#48CAE4', '#90E0EF', '#ADE8F4']}
+                series={[
+                  {
+                    data: pieChartData,
+                    highlightScope: { faded: 'global', highlighted: 'item' },
+                    faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
+                    innerRadius: 40,
+                    outerRadius: 96,
+                    paddingAngle: 5,
+                    cornerRadius: 5,
+                    startAngle: -90,
+                    endAngle: 270,
+                  },
+                ]}
+                slotProps={{
+                  legend: {
+                    direction: 'row',
+                    position: { vertical: 'bottom', horizontal: 'middle' },
+                    padding: 0,
+                  },
+                }}
+                height={300}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No assets to display in chart.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
