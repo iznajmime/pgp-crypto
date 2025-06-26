@@ -6,8 +6,8 @@
  * only if the previous one fails or returns invalid data (a price of 0 or null).
  *
  * The fallback chain is:
- * 1. CoinGecko (Primary)
- * 2. CoinMarketCap (First Backup)
+ * 1. CoinMarketCap (Primary)
+ * 2. CoinGecko (First Backup)
  * 3. CryptoCompare (Second Backup)
  * 4. Kaiko (Final Backup)
  *
@@ -27,6 +27,19 @@ type PriceResult = Record<string, PriceData>;
 
 const COINMARKETCAP_API_KEY = import.meta.env.VITE_COINMARKETCAP_API_KEY;
 const KAIKO_API_KEY = import.meta.env.VITE_KAIKO_API_KEY;
+
+// A manual map to resolve symbol ambiguity for major cryptocurrencies on CoinGecko.
+const SYMBOL_TO_GECKO_ID_MAP: Record<string, string> = {
+  'BTC': 'bitcoin',
+  'ETH': 'ethereum',
+  'SOL': 'solana',
+  'SUI': 'sui',
+  'USDT': 'tether',
+  'USDC': 'usd-coin',
+  'BNB': 'binancecoin',
+  'XRP': 'ripple',
+  'ADA': 'cardano',
+};
 
 // --- PROVIDER 1: COINGECKO ---
 
@@ -60,6 +73,16 @@ const tryCoinGecko = async (symbols: string[]): Promise<PriceResult> => {
     const coinList = await getCoinGeckoList();
     const idToSymbolMap: Record<string, string> = {};
     const coingeckoIds = symbols.map(symbol => {
+      const upperSymbol = symbol.toUpperCase();
+      // Prioritize the manual map to get the correct ID for major coins
+      const mappedId = SYMBOL_TO_GECKO_ID_MAP[upperSymbol];
+      if (mappedId) {
+        idToSymbolMap[mappedId] = symbol;
+        return mappedId;
+      }
+
+      // Fallback to searching the list for other coins.
+      // This can be ambiguous if multiple coins share a symbol.
       const coin = coinList.find(c => c.symbol === symbol.toLowerCase());
       if (coin) {
         idToSymbolMap[coin.id] = symbol;
@@ -68,7 +91,10 @@ const tryCoinGecko = async (symbols: string[]): Promise<PriceResult> => {
       return null;
     }).filter((id): id is string => id !== null);
 
-    if (coingeckoIds.length === 0) return prices;
+    if (coingeckoIds.length === 0) {
+        console.log("Could not find CoinGecko IDs for any of the requested symbols:", symbols);
+        return prices;
+    }
 
     const idsParam = coingeckoIds.join(',');
     const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${idsParam}&price_change_percentage=7d`;
@@ -221,15 +247,15 @@ export const fetchCryptoPrices = async (assetSymbols: string[]): Promise<PriceRe
   const finalPrices: PriceResult = {};
   let remainingSymbols = [...new Set(assetSymbols)]; // Ensure unique symbols
 
-  // Provider 1: CoinGecko
-  const geckoPrices = await tryCoinGecko(remainingSymbols);
-  Object.assign(finalPrices, geckoPrices);
+  // Provider 1: CoinMarketCap
+  const cmcPrices = await tryCoinMarketCap(remainingSymbols);
+  Object.assign(finalPrices, cmcPrices);
   remainingSymbols = remainingSymbols.filter(s => !finalPrices[s]);
 
-  // Provider 2: CoinMarketCap
+  // Provider 2: CoinGecko
   if (remainingSymbols.length > 0) {
-    const cmcPrices = await tryCoinMarketCap(remainingSymbols);
-    Object.assign(finalPrices, cmcPrices);
+    const geckoPrices = await tryCoinGecko(remainingSymbols);
+    Object.assign(finalPrices, geckoPrices);
     remainingSymbols = remainingSymbols.filter(s => !finalPrices[s]);
   }
 

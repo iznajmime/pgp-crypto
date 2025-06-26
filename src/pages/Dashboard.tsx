@@ -38,6 +38,7 @@ interface OpenPosition {
   marketValue: number;
   pnlPercent: number;
   sevenDayChange: number;
+  livePrice: number;
 }
 
 interface ClientOwnership {
@@ -181,7 +182,7 @@ export default function Dashboard() {
             const pnl = marketValue - costBasis;
             const pnlPercent = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
             
-            positions.push({ asset, quantityHeld, pnl, marketValue, pnlPercent, sevenDayChange });
+            positions.push({ asset, quantityHeld, pnl, marketValue, pnlPercent, sevenDayChange, livePrice });
           }
         }
         setOpenPositions(positions.sort((a, b) => b.marketValue - a.marketValue));
@@ -235,9 +236,10 @@ export default function Dashboard() {
           <SkeletonCard title="Total Portfolio Value" lines={1} />
           <SkeletonCard title="Unrealized P&L (Overall)" lines={2} />
         </div>
-        <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+        <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
           <SkeletonCard title="Current Holdings" lines={3} />
-          <SkeletonCard title="Asset Performance" lines={3} />
+          <SkeletonCard title="Performance" lines={3} />
+          <SkeletonCard title="Coin Tracker" lines={3} />
         </div>
         <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
           <SkeletonCard title="Client Ownership" lines={4} />
@@ -321,7 +323,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Current Holdings</CardTitle>
@@ -335,7 +337,7 @@ export default function Dashboard() {
                 <TableRow>
                   <TableHead>Asset</TableHead>
                   <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Market Value</TableHead>
+                  <TableHead className="text-right">Value</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -360,9 +362,9 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Asset Performance</CardTitle>
+            <CardTitle>Performance</CardTitle>
             <CardDescription>
-              Unrealized P&L and 7-day performance for each holding.
+              Unrealized P&L of currently held assets.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -370,9 +372,8 @@ export default function Dashboard() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Asset</TableHead>
-                  <TableHead className="text-right">P&L</TableHead>
-                  <TableHead className="text-right">P&L %</TableHead>
-                  <TableHead className="text-right">7d Change</TableHead>
+                  <TableHead className="text-right">$</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -402,6 +403,41 @@ export default function Dashboard() {
                           ? `${pos.pnl >= 0 ? '+' : ''}${pos.pnlPercent.toFixed(2)}%`
                           : 'N/A'}
                       </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      No open positions to analyze.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Coin Tracker</CardTitle>
+            <CardDescription>
+              Up-to-date information of assets held.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asset</TableHead>
+                  <TableHead className="text-right">Current Price</TableHead>
+                  <TableHead className="text-right">7d Change</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {openPositions.length > 0 ? (
+                  openPositions.map((pos) => (
+                    <TableRow key={pos.asset}>
+                      <TableCell className="font-medium">{pos.asset}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(pos.livePrice)}</TableCell>
                       <TableCell
                         className={cn(
                           "text-right font-semibold",
@@ -416,8 +452,8 @@ export default function Dashboard() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                      No open positions to analyze.
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      No assets to track.
                     </TableCell>
                   </TableRow>
                 )}
