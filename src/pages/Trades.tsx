@@ -9,8 +9,8 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-
-type TransactionType = 'DEPOSIT' | 'WITHDRAW' | 'BUY' | 'SELL';
+import { Button } from '@/components/ui/button';
+import { NewTradeDialog } from '@/components/NewTradeDialog';
 
 interface TradeTransaction {
   id: string;
@@ -26,6 +26,7 @@ export default function Trades() {
   const [trades, setTrades] = useState<TradeTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const fetchTrades = useCallback(async () => {
     setLoading(true);
@@ -80,12 +81,22 @@ export default function Trades() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Trades</h1>
-        <p className="text-muted-foreground">
-          A log of all buy and sell asset trades.
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Trades</h1>
+          <p className="text-muted-foreground">
+            A log of all buy and sell asset trades.
+          </p>
+        </div>
+        <Button onClick={() => setIsDialogOpen(true)}>Add New Trade</Button>
       </div>
+
+      <NewTradeDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={fetchTrades}
+      />
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -119,7 +130,9 @@ export default function Trades() {
                 <TableRow key={trade.id}>
                   <TableCell className="font-medium">{trade.asset}</TableCell>
                   <TableCell>
-                    <Badge variant={getPositionBadgeVariant(trade.transaction_type)}>
+                    <Badge
+                      variant={getPositionBadgeVariant(trade.transaction_type)}
+                    >
                       {trade.transaction_type === 'BUY' ? 'LONG' : 'SHORT'}
                     </Badge>
                   </TableCell>

@@ -23,7 +23,6 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
 
 interface PortfolioMetrics {
   totalValue: number;
@@ -35,6 +34,8 @@ interface OpenPosition {
   asset: string;
   quantityHeld: number;
   pnl: number;
+  marketValue: number;
+  pnlPercent: number;
 }
 
 interface ClientOwnership {
@@ -175,11 +176,12 @@ export default function Dashboard() {
             const livePrice = prices[asset]?.usd || 0;
             const marketValue = quantityHeld * livePrice;
             const pnl = marketValue - costBasis;
+            const pnlPercent = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
             
-            positions.push({ asset, quantityHeld, pnl });
+            positions.push({ asset, quantityHeld, pnl, marketValue, pnlPercent });
           }
         }
-        setOpenPositions(positions.sort((a, b) => b.pnl - a.pnl));
+        setOpenPositions(positions.sort((a, b) => b.marketValue - a.marketValue));
 
         // --- Client Ownership Calculation ---
         const { data: profiles, error: profilesError } = await supabase
@@ -226,10 +228,13 @@ export default function Dashboard() {
     return (
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-6">Dashboard</h1>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2">
           <SkeletonCard title="Total Portfolio Value" lines={1} />
           <SkeletonCard title="Unrealized P&L (Overall)" lines={2} />
-          <SkeletonCard title="Open Positions P&L" lines={3} />
+        </div>
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <SkeletonCard title="Current Holdings" lines={3} />
+          <SkeletonCard title="Asset Performance" lines={3} />
         </div>
         <div className="mt-6">
           <SkeletonCard title="Client Ownership" lines={4} />
@@ -262,7 +267,7 @@ export default function Dashboard() {
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight mb-6">Dashboard</h1>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Total Portfolio Value</CardTitle>
@@ -304,43 +309,99 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-        <Card className="lg:col-span-1">
+      </div>
+
+      <div className="mt-6 grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+        <Card>
           <CardHeader>
-            <CardTitle>Open Positions P&L</CardTitle>
+            <CardTitle>Current Holdings</CardTitle>
             <CardDescription>
-              Detailed P&L for each asset currently held.
+              Summary of all crypto assets currently held.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {openPositions.length > 0 ? (
-                openPositions.map((pos, index) => (
-                  <div key={pos.asset}>
-                    <div className="flex justify-between items-center">
-                      <div className="font-bold">{pos.asset}</div>
-                      <div
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asset</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Market Value</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {openPositions.length > 0 ? (
+                  openPositions.map((pos) => (
+                    <TableRow key={pos.asset}>
+                      <TableCell className="font-medium">{pos.asset}</TableCell>
+                      <TableCell className="text-right">{formatQuantity(pos.quantityHeld)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(pos.marketValue)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      No open positions found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Asset Performance</CardTitle>
+            <CardDescription>
+              Unrealized profit and loss for each holding.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Asset</TableHead>
+                  <TableHead className="text-right">P&L</TableHead>
+                  <TableHead className="text-right">P&L %</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {openPositions.length > 0 ? (
+                  openPositions.map((pos) => (
+                    <TableRow key={pos.asset}>
+                      <TableCell className="font-medium">{pos.asset}</TableCell>
+                      <TableCell
                         className={cn(
-                          "font-semibold",
+                          "text-right font-semibold",
                           pos.pnl >= 0
                             ? "text-green-600 dark:text-green-400"
                             : "text-red-600 dark:text-red-400"
                         )}
                       >
-                        {formatCurrency(pos.pnl)}
-                      </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Qty: {formatQuantity(pos.quantityHeld)}
-                    </div>
-                    {index < openPositions.length - 1 && <Separator className="mt-4" />}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No open positions found.
-                </p>
-              )}
-            </div>
+                        {pos.pnl >= 0 ? '+' : ''}{formatCurrency(pos.pnl)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-right font-semibold",
+                          pos.pnl >= 0
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        )}
+                      >
+                        {typeof pos.pnlPercent === 'number'
+                          ? `${pos.pnl >= 0 ? '+' : ''}${pos.pnlPercent.toFixed(2)}%`
+                          : 'N/A'}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      No open positions to analyze.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
